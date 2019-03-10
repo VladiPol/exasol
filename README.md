@@ -1,1 +1,1 @@
-# exasol
+# All around exasol database
