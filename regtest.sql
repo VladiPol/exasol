@@ -1,16 +1,16 @@
 OPEN SCHEMA REGTEST;
--- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
--- Exasol Script Framework for Regression Test
--- Created by Vladimir Poliakov (www.datenanalyseexpert.de)
--- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-/*  
-  INPUT
-    src_schema_name,src_table_name - first schema_name.table_name in MINUS query
-    dst_schema_name,dst_table_name - second schema_name.table_name in MINUS query
-  OUTPUT
-    select ... from src_schema_name.src_table_name MINUS select ... from dst_schema_name.dst_table_name
-*/
-CREATE OR REPLACE SCRIPT "REGTEST_MAIN" (src_schema_name,src_table_name,dst_schema_name,dst_table_name) RETURNS TABLE AS
+
+CREATE OR REPLACE LUA SCRIPT "REGTEST_MAIN" (p_debug, src_schema_name,src_table_name,dst_schema_name,dst_table_name) RETURNS TABLE AS
+  
+-- ******************************************************
+-- START OF function debug(output_string)
+  function debug(output_string)
+    if p_debug == true then
+      output(output_string)
+    end
+  end
+-- END OF function debug(output_string)
+
 -- ******************************************************
 -- START OF function create_select(schema_name, table_name)
 -- ATTENTION: the database user has to have access to the table in EXA_ALL_COLUMNS
@@ -22,7 +22,8 @@ CREATE OR REPLACE SCRIPT "REGTEST_MAIN" (src_schema_name,src_table_name,dst_sche
      SELECT ... FROM ... schema_name.table_name 
 */   
   function create_select(schema_name, table_name)
-    output('input parameters '..schema_name..'.'..table_name)
+    debug('input parameters '..schema_name..'.'..table_name)
+    -- output('input parameters '..schema_name..'.'..table_name)
     -- get all columns for MINUS query
     local success, columns = pquery([[SELECT COLUMN_NAME FROM EXA_ALL_COLUMNS WHERE COLUMN_SCHEMA = :s AND COLUMN_TABLE = :t]], {s=schema_name,t=table_name})
     if not success then
@@ -45,8 +46,8 @@ CREATE OR REPLACE SCRIPT "REGTEST_MAIN" (src_schema_name,src_table_name,dst_sche
       end
     end
     concat_str = concat_str..' FROM '..schema_name..'.'..table_name
-    -- debug
-    output('create_select RETURN --> '..concat_str)
+    debug('create_select RETURN -->; '..concat_str)
+    -- output('create_select RETURN -->; '..concat_str)
     return concat_str
   end
 -- END OF function get_columns(schema_name, table_name)
@@ -56,8 +57,8 @@ CREATE OR REPLACE SCRIPT "REGTEST_MAIN" (src_schema_name,src_table_name,dst_sche
 -- START OF create_MINUS_select(first_select, second_select)
   function create_MINUS_select(first_select, second_select)
     concat_str = first_select..'\n'..'MINUS'..'\n'..second_select..';'
-    -- debug
-    output('create_MINUS_select RETURN --> '..concat_str)
+    debug('create_MINUS_select RETURN -->; '..concat_str)
+    -- output('create_MINUS_select RETURN -->; '..concat_str)
     return concat_str
   end
 
@@ -76,6 +77,8 @@ CREATE OR REPLACE SCRIPT "REGTEST_MAIN" (src_schema_name,src_table_name,dst_sche
   return result, "regtest_output varchar(4000)"
 /
 
-EXECUTE SCRIPT REGTEST_MAIN ('TEST_USER', 'DOENER_IMBISS', 'TEST_USER', 'DOENER_IMBISS_BKP');
+COMMIT;
 
-EXECUTE SCRIPT REGTEST_MAIN ('TEST_USER', 'DOENER_IMBISS', 'TEST_USER', 'DOENER_IMBISS_BKP') WITH OUTPUT;
+EXECUTE SCRIPT REGTEST_MAIN (true, 'TEST_USER', 'DOENER_IMBISS', 'TEST_USER', 'DOENER_IMBISS_BKP');
+
+EXECUTE SCRIPT REGTEST_MAIN (true, 'TEST_USER', 'DOENER_IMBISS', 'TEST_USER', 'DOENER_IMBISS_BKP') WITH OUTPUT;
