@@ -1,9 +1,6 @@
 OPEN SCHEMA REGTEST;
 
-CREATE OR REPLACE LUA SCRIPT "REGTEST_MAIN" (debug_flag,
-                                             src_schema_name,src_table_name,
-                                             dst_schema_name,dst_table_name,
-                                             all_exclude_columns) RETURNS TABLE AS
+CREATE OR REPLACE LUA SCRIPT "REGTEST_MAIN" (debug_flag,src_schema_name,src_table_name,dst_schema_name,dst_table_name,all_exclude_columns) RETURNS TABLE AS
 -- ******************************************************
 -- crript generates the minus select of two tables
 -- for the regression test
@@ -13,7 +10,14 @@ CREATE OR REPLACE LUA SCRIPT "REGTEST_MAIN" (debug_flag,
 -- src_schema, src_table_name     - reference schema.table
 -- dst_schema_name,dst_table_name - remap schema.table
 -- all_exclude_columns            - the list of exclude columns comma separated
--- ******************************************************  
+-- ****************************************************** 
+
+-- ******************************************************
+-- START OF function isEmpty(string)
+  function isEmpty(string)
+    return string == nil or string == '' or string == null
+  end
+-- END OF function isEmpty(string) 
 
 -- ******************************************************
 -- START OF function debug(output_string)
@@ -39,7 +43,7 @@ CREATE OR REPLACE LUA SCRIPT "REGTEST_MAIN" (debug_flag,
 
     -- parse exclude_columns string
     local parsed_exclude_columns = null
-    if exclude_columns ~= null then
+    if not isEmpty(exclude_columns) then
       parsed_exclude_columns = sqlparsing.tokenize(exclude_columns)
       debug('exclude column(s) --> '..exclude_columns)
     end
@@ -62,11 +66,11 @@ CREATE OR REPLACE LUA SCRIPT "REGTEST_MAIN" (debug_flag,
     for i=1, #columns do
       -- check exclude columns
       local ifNotExcludedColumns = null
-      if parsed_exclude_columns ~= null then
+      if not isEmpty(parsed_exclude_columns) then
         ifNotExcludedColumns = sqlparsing.find(parsed_exclude_columns,1,true,false,sqlparsing.iswhitespaceorcomment,string.upper(columns[i][1]))
       end
 
-      if ifNotExcludedColumns == nil then
+      if isEmpty(ifNotExcludedColumns) then
         if i == #columns then
           concat_str = concat_str..columns[i][1]
         else
@@ -111,9 +115,13 @@ CREATE OR REPLACE LUA SCRIPT "REGTEST_MAIN" (debug_flag,
 
 COMMIT;
 
-EXECUTE SCRIPT REGTEST_MAIN (true, 'TEST_USER', 'T_KUNDE_TEST', 'L0D_M00_SANDBOX_301875', 'T_KUNDE_TEST_BKP', 'ID,STRASSE');
+EXECUTE SCRIPT REGTEST_MAIN (true, 'L0D_M00_SANDBOX_301875', 'T_KUNDE_TEST', 'L0D_M00_SANDBOX_301875', 'T_KUNDE_TEST_BKP', 'ID,STRASSE');
+                                                                                      
+EXECUTE SCRIPT REGTEST_MAIN (true, 'L0D_M00_SANDBOX_301875', 'T_KUNDE_TEST', 'L0D_M00_SANDBOX_301875', 'T_KUNDE_TEST_BKP', 'ID,STRASSE');
+                                                                                      
+EXECUTE SCRIPT REGTEST_MAIN (true, 'TEST_USER', 'T_KUNDE_TEST', 'TEST_USER', 'T_KUNDE_TEST_BKP', 'ID,STRASSE');
 
-EXECUTE SCRIPT REGTEST_MAIN (true, 'TEST_USER', 'T_KUNDE_TEST', 'L0D_M00_SANDBOX_301875', 'T_KUNDE_TEST_BKP', 'ID,STRASSE') with output;
+EXECUTE SCRIPT REGTEST_MAIN (true, 'TEST_USER', 'T_KUNDE_TEST', 'TEST_USER', 'T_KUNDE_TEST_BKP', 'ID,STRASSE') with output;
 
 CREATE OR REPLACE TABLE T_KUNDE_TEST (
     ID      DECIMAL(9,0),
