@@ -98,9 +98,9 @@ This instruction is based on the blog https://beatthebookie.blog/2019/01/14/how-
  17. Test it
      +--> select TEST_BUCKETFS.ABOUT_EXASOL() from dual;
      Return:
-     PARAM	               | WERT
+     PARAM                 | WERT
      ------------------------------
-     Datenbank Name	       | EXAone
-     Datenbank Version	   | 6.0.15
+     Datenbank Name        | EXAone
+     Datenbank Version     | 6.0.15
      Python Version        | Python 3.6.8
-     Anzahl Knoten	       | 1
+     Anzahl Knoten         | 1
