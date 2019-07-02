@@ -1,0 +1,106 @@
+How To Run TensorFlow in Exasol Community Edition
+This instruction is based on the blog https://beatthebookie.blog/2019/01/14/how-to-run-tensorflow-in-exasol-community-edition/
+=================================================
+1. Install VBox Portable (http://www.vbox.me/)
+2. Create Linux CentOS 7 from VBox-Image (https://www.osboxes.org/centos/)
+3. Configure PuTTY and WinSCP to access to CentOS in VBox
+4. Install and Use Docker on CentOS 7 (https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-centos-7)
+    ++++++++++++++++++++++++++++++++++++++++++++++
+    Executing Docker Command Without Sudo --> TODO
+    ++++++++++++++++++++++++++++++++++++++++++++++
+5. Install Git on CentOS
+    #just run in PuTTY
+    sudo yum install git
+    git --version
+6. Clone EXASOL Script Languages to CentOS
+    #make the directory first
+    cd 
+    cd Git
+    cd exasol
+    #clone the repository
+    git clone https://github.com/exasol/script-languages
+7. Install Python 3.6 
+    #https://www.rosehosting.com/blog/how-to-install-python-3-6-4-on-centos-7/
+    https://hostadvice.com/how-to/how-to-install-python-3-on-centos-7-using-scl/
+    scl enable rh-python36 bash
+8. Install pip if not already install during istallation of Python 3.6
+    sudo yum install python-pip    
+9. Create sample Docker-File
+    ./exaslct export --flavor-path=flavors/python3-ds-EXASOL-6.0.0 --export-path /home/osboxes/Docker_Files
+    Does not work for user osboxes with error 'Permission denied'
+    Should running as root :-( and not as sudo
+10. Download the bucketfs-explorer
+    The BucketFS explorer is a tiny GUI written in Java/JavaFX that helps you working with BucketFS 
+    https://github.com/EXASOL/bucketfs-explorer/blob/master/build/bucketfsexplorer-0.0.1-SNAPSHOT-jar-with-dependencies.jar
+    Prerequisites --> Java 8, BucketFS Explorer was tested with Java 8u144
+    +--> unfortunately the last version of bucketfs-explorer in github (aaa216f on 8 Mar 2018) does not work with Java 8u144
+         please install Java SE Development Kit 8u202 (https://www.oracle.com/technetwork/java/javase/downloads/java-archive-javase8-2177648.html)
+         to start BucketFS Explorer
+         java -jar bucketfsexplorer-0.0.1-SNAPSHOT-jar-with-dependencies.jar
+11. How to create an EXABucketFS service and bucket
+    https://www.exasol.com/support/browse/SOL-503
+12. Upload your Docker file to BucketFS in BucketFS Explorer and test this in browser
+    for example:
+    +--> https://127.0.0.1:8443/bucket1/python3-ds-EXASOL-6.0.0_release.tar.gz/
+    If the path to the Docker file is correct you have to get file to download
+12. To check the current version of Python
+    +--> Create sample Python UDF (Python 2 Exasol 6.0)
+    create or replace python scalar script "TEST_TENSORFLOW" (p_test varchar(100)) returns varchar(100)
+    as
+    import tensorflow as tf
+    def run(ctx):
+      v_const = tf.constant(str(ctx.p_test))
+      v_sess = tf.Session()
+      v_return = v_sess.run(v_const)
+      return v_return.decode()
+    /
+    Test it:
+    select TEST_BUCKETFS.TEST_TENSORFLOW('Hello world') from sys.dual;
+    [22002] VM error: ImportError: Traceback (most recent call last):
+    File "TEST_TENSORFLOW", line 1, in <module>
+    ImportError: No module named tensorflow
+    (Session: 1637901379710509112)
+13. Populate the new Docker container as a new script language:
+    ALTER SESSION SET SCRIPT_LANGUAGES = 'PYTHON=builtin_python R=builtin_r JAVA=builtin_java PYTHON3=localzmq+protobuf:///bucketfs1/bucket1/python3-ds-EXASOL-6.0.0_release/?lang=python#/buckets/bucketfs1/bucket1/python3-ds-EXASOL-6.0.0_release/exaudf/exaudfclient_py3';
+14. Create sample Python UDF (Python 3 Exasol 6.0 with BucketFS)
+    create or replace PYTHON3 scalar script "TEST_TENSORFLOW_PYTHON3" (p_test varchar(100)) returns varchar(100)
+    as
+    import tensorflow as tf
+    def run(ctx):
+      v_const = tf.constant(str(ctx.p_test))
+      v_sess = tf.Session()
+      v_return = v_sess.run(v_const)
+      return v_return.decode()
+    /
+15. Test it
+    +--> select TEST_BUCKETFS.TEST_TENSORFLOW_PYTHON3('Hello world') from dual;
+    Return:
+    TEST_TENSORFLOW_PYTHON3('Hello world')
+    ------------------------------
+    Hello world
+    ======================================
+    !!!          SUCCSESS              !!!
+    ======================================    
+15. To check the SCRIPT_LANGUAGES
+    SELECT session_value FROM exa_parameters WHERE parameter_name='SCRIPT_LANGUAGES';
+    
+    ======================================
+    Nice to have
+    ======================================
+16. Create the script to check the database
+    CREATE OR REPLACE PYTHON3 SCALAR SCRIPT "ABOUT_EXASOL" () EMITS ("PARAM" VARCHAR(10000) UTF8, "WERT" VARCHAR(10000) UTF8) AS
+    def run(ctx):
+      ctx.emit('Datenbank Name', exa.meta.database_name)
+      ctx.emit('Datenbank Version', exa.meta.database_version)
+      ctx.emit('Python Version', exa.meta.script_language)
+      ctx.emit('Anzahl Knoten', str(exa.meta.node_count))
+    /
+ 17. Test it
+     +--> select TEST_BUCKETFS.ABOUT_EXASOL() from dual;
+     Return:
+     PARAM	               | WERT
+     ------------------------------
+     Datenbank Name	       | EXAone
+     Datenbank Version	   | 6.0.15
+     Python Version	       | Python 3.6.8
+     Anzahl Knoten	       | 1
