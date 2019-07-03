@@ -25,9 +25,9 @@ This instruction is based on the blog https://beatthebookie.blog/2019/01/14/how-
     scl enable rh-python36 bash
 8. Install pip if not already install during istallation of Python 3.6
     sudo yum install python-pip    
-9. Create sample Docker-File
+9. Create sample Docker-File for Exasol (see https://github.com/exasol/script-languages)
     ./exaslct export --flavor-path=flavors/python3-ds-EXASOL-6.0.0 --export-path /home/osboxes/Docker_Files
-    Does not work for user osboxes with error 'Permission denied'
+    Does not work for user osboxes (from CentOS) with error 'Permission denied'
     Should running as root :-( and not as sudo
 10. Download the bucketfs-explorer
     The BucketFS explorer is a tiny GUI written in Java/JavaFX that helps you working with BucketFS 
